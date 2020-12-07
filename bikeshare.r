@@ -179,3 +179,28 @@ corrplot(corr, method="color", col=col(200),
          diag=FALSE )
 
 
+traintest=rbind(train,test)
+#Ridge
+x=model.matrix(count~.,traintest)[,-1]
+y=traintest$count
+grid=10^seq(10,-2,length=100)
+ridge.mod=glmnet(x[1:10886,],y[1:10886],alpha=0,lambda=grid)
+cv.out=cv.glmnet(x[1:10886,],y[1:10886],alpha=0)
+plot(cv.out)
+bestlam=cv.out$lambda.min
+bestlam
+ytest=test$count
+ridge.pred=predict(ridge.mod,s=bestlam,newx=x[10887:17379,])
+mean((ridge.pred-ytest)^2)
+
+
+#Lasso
+lasso.mod=glmnet(x[1:10886,],y[1:10886],alpha=1,lambda=grid)
+plot(lasso.mod)
+cv.out2=cv.glmnet(x[1:10886,],y[1:10886],alpha=1)
+plot(cv.out2)
+bestlam2=cv.out$lambda.min
+bestlam2
+lasso.pred=predict(lasso.mod,s=bestlam2,newx=x[10887:17379,])
+mean((lasso.pred-ytest)^2)
+
