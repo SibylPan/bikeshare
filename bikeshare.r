@@ -15,6 +15,7 @@ library(devtools)
 library(tidyverse)
 library(broom)
 library(ggthemes)
+library(glmnet)
 
 setwd("C:/Users/SPan/Downloads/stat508/final_project/data/bike-sharing-demand")
 
