@@ -56,6 +56,16 @@ data$weather=factor(data$weather,levels=c(1,2,3,4),labels = c("Clear","Mist","Li
 data$holiday=factor(data$holiday,levels=c(0,1),labels = c("Not holiday","Holiday"))
 data$workingday=factor(data$workingday,levels=c(0,1),labels = c("Not Workday","Workday"))
 
+train$season=factor(train$season,levels=c(1,2,3,4),labels = c("Spring","Summer","Fall","Winter"))
+train$weather=factor(train$weather,levels=c(1,2,3,4),labels = c("Clear","Mist","Light Snow and Rain","Heavy Rain"))
+train$holiday=factor(train$holiday,levels=c(0,1),labels = c("Not holiday","Holiday"))
+train$workingday=factor(train$workingday,levels=c(0,1),labels = c("Not Workday","Workday"))
+
+test$season=factor(test$season,levels=c(1,2,3,4),labels = c("Spring","Summer","Fall","Winter"))
+test$weather=factor(test$weather,levels=c(1,2,3,4),labels = c("Clear","Mist","Light Snow and Rain","Heavy Rain"))
+test$holiday=factor(test$holiday,levels=c(0,1),labels = c("Not holiday","Holiday"))
+test$workingday=factor(test$workingday,levels=c(0,1),labels = c("Not Workday","Workday"))
+
 # histograms: factor
 data%>%
   select(season, holiday, workingday,weather) %>%
@@ -179,80 +189,21 @@ corrplot(corr, method="color", col=col(200),
          diag=FALSE )
 
 
-# transform outcome variables
-addTransforms = function(X){
-  X = X %>%
-  gather(key = "Variable", value = "Value")
-  
-  X.log = X %>%
-  mutate(
-    Value = log(Value),
-    Variable = paste0("log(", Variable, ")"),
-    Transform = "Log(x)"
-  )  
-  
-  X.exp = X %>%
-  mutate(
-    Value = exp(-Value),
-    Variable = paste0("exp(-", Variable, ")"),
-    Transform = "exp(-x)"
-  )  
-  
-  X.inv = X %>%
-  mutate(
-    Value = 1/Value,
-    Variable = paste0("1/", Variable),
-    Transform = "1/x"
-  )  
-  
-  X.rt = X %>%
-  mutate(
-    Value = sqrt(Value),
-    Variable = paste0("sqrt(", Variable, ")"),
-    Transform = "sqrt(x)"
-  ) 
-  
-  X = X %>%
-    mutate(
-      Transform = "x"
-    )
-  
-  X = rbind(X, X.log, X.exp, X.inv, X.rt)
-  
-  X = X %>%
-    group_by(Variable, Transform) %>%
-    mutate(
-       valid = !(any(is.na(Value)) || any(is.infinite(Value)))) %>%
-    ungroup() %>%
-    filter(valid == TRUE)
-  
-  return(X)
-}
+train_orig=train
+train$registered=train$registered+1
+train$casual=train$casual+1
 
-ggRespEval = function(X){
-  X %>% 
-  group_by(Variable) %>%
-  mutate(shapiro.log.p = log(shapiro.test(Value)$p.value, base = 10)) %>%
-  ggplot(aes(x = Value, fill = shapiro.log.p)) +
-  geom_histogram(aes(y=..density..), color = "black", bins = 20) +
-  scale_fill_gradient(limits = c(-8, 0), na.value = "Black", low = "Black", high = "Blue") +
-  geom_density(alpha = 0.3, color = "red", fill = "black") +
-  facet_wrap(vars(Variable), scales = "free")
-}
-
-train_num$registered=train_num$registered+1
-train_num$casual=train_num$casual+1
-
-train.r=train_num[sample(nrow(train_num), 5000), ]
+train.r=train[sample(nrow(train), 5000), ]
 drop <- c("casual","count")
 train.r= train.r[,!(names(train.r) %in% drop)]
 
-train.c=train_num[sample(nrow(train_num), 5000), ]
+train.c=train[sample(nrow(train), 5000), ]
 drop <- c("registered","count")
 train.c= train.c[,!(names(train.c) %in% drop)]
 
 # transform registered
-var <- c("temp","atemp","humidity","windspeed")
+var <- c("temp","atemp","humidity","windspeed","season","holiday","workingday","weather")
+
 ### No Transformation
 train.r %>% 
   gather(key = "Variable", value = "Value", var) %>%
@@ -322,6 +273,7 @@ train.c  %>%
     Value = residuals(lm(1/train.c$casual ~ Value)),
     Variable = paste0("residual of\n1/casual ~ ", Variable)) %>%
   ggRespEval()
+
 
 train$rtreg <- sqrt(train$registered)
 train$rtcas <- sqrt(train$casual)
