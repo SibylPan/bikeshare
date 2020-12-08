@@ -469,6 +469,73 @@ importance(rf.reg)
 varImpPlot(rf.reg)
 pred.reg=predict(rf.reg,newdata=test[,-1])
 
+########################
+#boosting on sqrt transformed data
+########################
+library(gbm)
+#casual
+set.seed(1)
+formula <- rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+shr=c(0.001,0.005,0.01,0.05,0.1)
+n.trees=seq(from=100,to=10000,by=100)
+for (i in 1:5) {
+  shrinkage=shr[i]
+  boost.cas=gbm(formula,data=newtrain,distribution="gaussian",
+                n.trees=10000,interaction.depth=4,shrinkage=shrinkage,verbose=F)
+  predmat=predict(boost.cas,newdata=newtest,n.trees=n.trees)
+  berr=with(newtest,apply((predmat-rtcas)^2,2,mean))
+  assign(paste("predmat", i, sep = ""), predmat) 
+  assign(paste("berr", i, sep = ""), berr)
+}
+par(mfrow=c(3,2))
+plot(n.trees,berr1,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+plot(n.trees,berr2,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+plot(n.trees,berr3,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+plot(n.trees,berr4,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+plot(n.trees,berr5,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+
+matplot(n.trees,cbind(berr4,berr5),pch=19,col=c("red","blue"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+legend("topright",title="Shrinkage",legend=c("0.05","0.1"),pch=19,col=c("red","blue"))
+#abline(h=min(test.err.cas),col="black")
+#choose shrinkage=0.05, n.tree=10000
+
+formula <- rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+boost.cas=gbm(formula,data=train[,-1],distribution="gaussian",
+              n.trees=10000,interaction.depth=4,shrinkage=0.1,verbose=F)
+pred.boost.cas=predict(boost.cas,newdata=test[,-1],n.trees=10000)
+
+#registered
+set.seed(1)
+formula <- rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+shr=c(0.001,0.005,0.01,0.05,0.1)
+n.trees=seq(from=100,to=10000,by=100)
+for (i in 1:5) {
+  shrinkage=shr[i]
+  boost.reg=gbm(formula,data=newtrain,distribution="gaussian",
+                n.trees=10000,interaction.depth=4,shrinkage=shrinkage,verbose=F)
+  predmat=predict(boost.reg,newdata=newtest,n.trees=n.trees)
+  berr=with(newtest,apply((predmat-rtreg)^2,2,mean))
+  assign(paste("predmat", i, sep = ""), predmat) 
+  assign(paste("berr", i, sep = ""), berr)
+}
+par(mfrow=c(3,2))
+plot(n.trees,berr1,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+plot(n.trees,berr2,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+plot(n.trees,berr3,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+plot(n.trees,berr4,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+plot(n.trees,berr5,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+
+par(mfrow=c(1,1))
+matplot(n.trees,cbind(berr4,berr5),pch=19,col=c("red","blue"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+legend("topright",title="Shrinkage",legend=c("0.05","0.1"),pch=19,col=c("red","blue"))
+#abline(h=min(test.err.reg),col="black")
+#choose shrinkage=0.05, n.tree=10000
+
+formula <- rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+boost.reg=gbm(formula,data=train[,-1],distribution="gaussian",
+              n.trees=10000,interaction.depth=4,shrinkage=0.1,verbose=F)
+pred.boost.reg=predict(boost.reg,newdata=test[,-1],n.trees=10000)
+
 ##########################
 #save results for kaggle submission
 ##########################
@@ -476,3 +543,6 @@ pred.total=pred.cas+pred.reg
 result <- data.frame(datetime = test$datetime, count=pred.total)
 write.csv(result, file="submit_result_untrans_nohrbin.csv",row.names=FALSE)
 
+pred.boost.total=(pred.boost.cas)^2+(pred.boost.reg)^2
+result2 <- data.frame(datetime = test$datetime, count=pred.boost.total)
+write.csv(result2, file="submit_result_trans_nohrbin_boost.csv",row.names=FALSE)
