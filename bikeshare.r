@@ -408,3 +408,71 @@ bestlam4=cv.out4$lambda.min
 bestlam4
 lasso.pred2=predict(lasso.mod2,s=bestlam4,newx=x2[-train.index,])
 mean((lasso.pred2-ytest2)^2)
+
+####################
+#Random forest
+####################
+library(randomForest)
+newtrain <- newtrain[,-1]
+newtest <- newtest[,-1]
+
+##untransformed
+#casual
+oob.err.cas=double(11)
+test.err.cas=double(11)
+formula <- casual~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+set.seed(1)
+for(mtry in 1:11){
+    fit=randomForest(formula,data=newtrain,mtry=mtry,ntree=400)
+    oob.err.cas[mtry]=fit$mse[400]
+    pred=predict(fit,newdata=newtest)
+    test.err.cas[mtry]=with(newtest,mean((casual-pred)^2))
+    cat(mtry," ")
+}
+
+matplot(1:11,cbind(test.err.cas,oob.err.cas),pch=19,col=c("red","blue"),type="b", xlab="mtry",
+        ylab="Mean Squared Error")
+legend("topright",legend=c("Test","OOB"),pch=19,col=c("red","blue"))
+##minimum err occurred at mtry=4,test error=229.043
+
+set.seed(1)
+formula <- casual~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+rf.cas=randomForest(formula,data=train[,-1],mtry=4,importance=TRUE,ntree=400)
+rf.cas
+importance(rf.cas)
+varImpPlot(rf.cas)
+pred.cas=predict(rf.cas,newdata=test[,-1])
+
+#registered
+oob.err.reg=double(11)
+test.err.reg=double(11)
+formula <- registered~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+set.seed(1)
+for(mtry in 1:11){
+  fit=randomForest(formula,data=newtrain,mtry=mtry,ntree=400)
+  oob.err.reg[mtry]=fit$mse[400]
+  pred=predict(fit,newdata=newtest)
+  test.err.reg[mtry]=with(newtest,mean((registered-pred)^2))
+  cat(mtry," ")
+}
+
+matplot(1:11,cbind(test.err.reg,oob.err.reg),pch=19,col=c("red","blue"),type="b",xlab="mtry",
+        ylab="Mean Squared Error")
+legend("topright",legend=c("Test","OOB"),pch=19,col=c("red","blue"))
+##minimum err occurred at mtry=7,test error=1069.282
+
+set.seed(1)
+formula <- registered~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+rf.reg=randomForest(formula,data=train[,-1],mtry=7,importance=TRUE,ntree=400)
+rf.reg
+importance(rf.reg)
+varImpPlot(rf.reg)
+pred.reg=predict(rf.reg,newdata=test[,-1])
+
+##########################
+#save results for kaggle submission
+##########################
+pred.total=pred.cas+pred.reg
+result <- data.frame(datetime = test$datetime, count=pred.total)
+write.csv(result, file="submit_result_untrans_nohrbin.csv",row.names=FALSE)
+
