@@ -178,4 +178,8 @@ corrplot(corr, method="color", col=col(200),
          # hide correlation coefficient on the principal diagonal
          diag=FALSE )
 
+train$logreg <- log(train$registered + 1)
+train$logcas <- log(train$casual + 1)
 
+data$logreg <- log(data$registered + 1)
+data$logcas <- log(data$casual + 1)
