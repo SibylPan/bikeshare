@@ -294,41 +294,42 @@ newtest <- train[-train.index,]
 d=rpart(rtreg~hour,data=train)
 fancyRpartPlot(d)
 
+#binning hours
 library(rpart)
 library(rattle) 
 library(rpart.plot)
 library(RColorBrewer)
-logreg.bin=rpart(logreg~hour,data=train)
-fancyRpartPlot(logreg.bin)
-logcas.bin=rpart(logcas~hour,data=train)
-fancyRpartPlot(logcas.bin)
-logcou.bin=rpart(logcou~hour,data=train)
-fancyRpartPlot(logcou.bin)
+reg.bin=rpart(registered~hour,data=train)
+fancyRpartPlot(reg.bin)
+cas.bin=rpart(casual~hour,data=train)
+fancyRpartPlot(cas.bin)
+cou.bin=rpart(count~hour,data=train)
+fancyRpartPlot(cou.bin)
 
-#hour bins for registered
+###hour bins for registered
 data$hr_reg=0
-data$hr_reg[data$hour<2]=1
-data$hr_reg[data$hour>2 & data$hour<6]=2
-data$hr_reg[data$hour==6]=3
-data$hr_reg[data$hour>=22]=4
-data$hr_reg[data$hour>6 & data$hour<16]=5
-data$hr_reg[data$hour==20 | data$hour==21]=6
-data$hr_reg[data$hour>15 & data$hour<20]=7
+data$hr_reg[data$hour<7]=1
+data$hr_reg[data$hour>=21]=2
+data$hr_reg[data$hour>8 & data$hour<17]=3
+data$hr_reg[data$hour==7]=4
+data$hr_reg[data$hour==8]=5
+data$hr_reg[data$hour>=19 & data$hour<21]=6
+data$hr_reg[data$hour>=17 & data$hour<19]=7
 
 #hour bins for casual
 data$hr_cas=0
-data$hr_cas[data$hour>1 & data$hour<7]=1
-data$hr_cas[data$hour<2]=2
-data$hr_cas[data$hour==7]=3
-data$hr_cas[data$hour>=20]=4
-data$hr_cas[data$hour>7 & data$hour<11]=5
-data$hr_cas[data$hour>10 & data$hour<20]=6
+data$hr_cas[data$hour<=7]=1
+data$hr_cas[data$hour==8 | data$hour==9]=2
+data$hr_cas[data$hour>=20]=3
+data$hr_cas[data$hour>9 & data$hour<20]=4
 
 #hour bins for count
 data$hr_cou=0
-data$hr_cou[data$hour>1 & data$hour<6]=1
-data$hr_cou[data$hour<2]=2
-data$hr_cou[data$hour==6]=3
-data$hr_cou[data$hour>=21]=4
-data$hr_cou[data$hour>6 & data$hour<16]=5
-data$hr_cou[data$hour>15 & data$hour<21]=6
+data$hr_cou[data$hour<7]=1
+data$hr_cou[data$hour>=21]=2
+data$hr_cou[data$hour>8 & data$hour<16]=3
+data$hr_cou[data$hour==7]=4
+data$hr_cou[data$hour==8]=5
+data$hr_cou[data$hour>=19 & data$hour<21]=6
+data$hr_cou[data$hour==16]=7
+data$hr_cou[data$hour>=17 & data$hour<19]=8
