@@ -416,58 +416,58 @@ library(randomForest)
 newtrain <- newtrain[,-1]
 newtest <- newtest[,-1]
 
-##untransformed
+#sqrt transformed rf (same results as nontransformed)
 #casual
-oob.err.cas=double(11)
-test.err.cas=double(11)
-formula <- casual~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
-set.seed(1)
-for(mtry in 1:11){
-    fit=randomForest(formula,data=newtrain,mtry=mtry,ntree=400)
-    oob.err.cas[mtry]=fit$mse[400]
-    pred=predict(fit,newdata=newtest)
-    test.err.cas[mtry]=with(newtest,mean((casual-pred)^2))
-    cat(mtry," ")
-}
-
-matplot(1:11,cbind(test.err.cas,oob.err.cas),pch=19,col=c("red","blue"),type="b", xlab="mtry",
-        ylab="Mean Squared Error")
-legend("topright",legend=c("Test","OOB"),pch=19,col=c("red","blue"))
-##minimum err occurred at mtry=4,test error=229.043
-
-set.seed(1)
-formula <- casual~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
-rf.cas=randomForest(formula,data=train[,-1],mtry=4,importance=TRUE,ntree=400)
-rf.cas
-importance(rf.cas)
-varImpPlot(rf.cas)
-pred.cas=predict(rf.cas,newdata=test[,-1])
-
-#registered
-oob.err.reg=double(11)
-test.err.reg=double(11)
-formula <- registered~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+oob.err.cas2=double(11)
+test.err.cas2=double(11)
+formula <- rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
 set.seed(1)
 for(mtry in 1:11){
   fit=randomForest(formula,data=newtrain,mtry=mtry,ntree=400)
-  oob.err.reg[mtry]=fit$mse[400]
+  oob.err.cas2[mtry]=fit$mse[400]
   pred=predict(fit,newdata=newtest)
-  test.err.reg[mtry]=with(newtest,mean((registered-pred)^2))
+  test.err.cas2[mtry]=with(newtest,mean((rtcas-pred)^2))
   cat(mtry," ")
 }
 
-matplot(1:11,cbind(test.err.reg,oob.err.reg),pch=19,col=c("red","blue"),type="b",xlab="mtry",
+matplot(1:11,cbind(test.err.cas2,oob.err.cas2),pch=19,col=c("red","blue"),type="b", xlab="mtry",
         ylab="Mean Squared Error")
 legend("topright",legend=c("Test","OOB"),pch=19,col=c("red","blue"))
-##minimum err occurred at mtry=7,test error=1069.282
+##minimum err occurred at mtry=7,test error=1.089
 
 set.seed(1)
-formula <- registered~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
-rf.reg=randomForest(formula,data=train[,-1],mtry=7,importance=TRUE,ntree=400)
-rf.reg
-importance(rf.reg)
-varImpPlot(rf.reg)
-pred.reg=predict(rf.reg,newdata=test[,-1])
+formula <- rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+rf.cas2=randomForest(formula,data=train[,-1],mtry=7,importance=TRUE,ntree=400)
+rf.cas2
+importance(rf.cas2)
+varImpPlot(rf.cas2)
+pred.cas2=predict(rf.cas2,newdata=test[,-1])
+
+#registered
+oob.err.reg2=double(11)
+test.err.reg2=double(11)
+formula <- rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+set.seed(1)
+for(mtry in 1:11){
+  fit=randomForest(formula,data=newtrain,mtry=mtry,ntree=400)
+  oob.err.reg2[mtry]=fit$mse[400]
+  pred=predict(fit,newdata=newtest)
+  test.err.reg2[mtry]=with(newtest,mean((rtreg-pred)^2))
+  cat(mtry," ")
+}
+
+matplot(1:11,cbind(test.err.reg2,oob.err.cas2),pch=19,col=c("red","blue"),type="b", xlab="mtry",
+        ylab="Mean Squared Error")
+legend("topright",legend=c("Test","OOB"),pch=19,col=c("red","blue"))
+##minimum err occurred at mtry=8,test error=1.457
+
+set.seed(1)
+formula <- rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+rf.reg2=randomForest(formula,data=train[,-1],mtry=8,importance=TRUE,ntree=400)
+rf.reg2
+importance(rf.reg2)
+varImpPlot(rf.reg2)
+pred.reg2=predict(rf.reg2,newdata=test[,-1])
 
 ########################
 #boosting on sqrt transformed data
@@ -496,7 +496,7 @@ plot(n.trees,berr5,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boostin
 
 matplot(n.trees,cbind(berr4,berr5),pch=19,col=c("red","blue"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
 legend("topright",title="Shrinkage",legend=c("0.05","0.1"),pch=19,col=c("red","blue"))
-#abline(h=min(test.err.cas),col="black")
+abline(h=min(test.err.cas2),col="black")
 #choose shrinkage=0.05, n.tree=10000
 
 formula <- rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
@@ -528,7 +528,7 @@ plot(n.trees,berr5,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boostin
 par(mfrow=c(1,1))
 matplot(n.trees,cbind(berr4,berr5),pch=19,col=c("red","blue"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
 legend("topright",title="Shrinkage",legend=c("0.05","0.1"),pch=19,col=c("red","blue"))
-#abline(h=min(test.err.reg),col="black")
+abline(h=min(test.err.reg2),col="black")
 #choose shrinkage=0.05, n.tree=10000
 
 formula <- rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
@@ -539,9 +539,9 @@ pred.boost.reg=predict(boost.reg,newdata=test[,-1],n.trees=10000)
 ##########################
 #save results for kaggle submission
 ##########################
-pred.total=pred.cas+pred.reg
+pred.total=(pred.cas2)^2+(pred.reg2)^2
 result <- data.frame(datetime = test$datetime, count=pred.total)
-write.csv(result, file="submit_result_untrans_nohrbin.csv",row.names=FALSE)
+write.csv(result, file="submit_result_trans_nohrbin_rf.csv",row.names=FALSE)
 
 pred.boost.total=(pred.boost.cas)^2+(pred.boost.reg)^2
 result2 <- data.frame(datetime = test$datetime, count=pred.boost.total)
