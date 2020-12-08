@@ -286,10 +286,7 @@ test$rtcas <- 0
 
 train$hour=as.integer(train$hour) # convert hour to integer
 test$hour=as.integer(test$hour) # modifying in both train and test data set
-
-train.index <- createDataPartition(paste(train$holiday,train$season,train$weather,train$workingday), p = 0.8, list = FALSE)
-newtrain <- train[train.index,]
-newtest <- train[-train.index,]
+data$hour=as.integer(data$hour)
 
 d=rpart(rtreg~hour,data=train)
 fancyRpartPlot(d)
@@ -315,6 +312,15 @@ data$hr_reg[data$hour==7]=4
 data$hr_reg[data$hour==8]=5
 data$hr_reg[data$hour>=19 & data$hour<21]=6
 data$hr_reg[data$hour>=17 & data$hour<19]=7
+train$hr_reg=0
+train$hr_reg[train$hour<7]=1
+train$hr_reg[train$hour>=21]=2
+train$hr_reg[train$hour>8 & train$hour<17]=3
+train$hr_reg[train$hour==7]=4
+train$hr_reg[train$hour==8]=5
+train$hr_reg[train$hour>=19 & train$hour<21]=6
+train$hr_reg[train$hour>=17 & train$hour<19]=7
+test$hr_reg=0
 
 #hour bins for casual
 data$hr_cas=0
@@ -322,6 +328,12 @@ data$hr_cas[data$hour<=7]=1
 data$hr_cas[data$hour==8 | data$hour==9]=2
 data$hr_cas[data$hour>=20]=3
 data$hr_cas[data$hour>9 & data$hour<20]=4
+train$hr_cas=0
+train$hr_cas[train$hour<=7]=1
+train$hr_cas[train$hour==8 | train$hour==9]=2
+train$hr_cas[train$hour>=20]=3
+train$hr_cas[train$hour>9 & train$hour<20]=4
+test$hr_cas=0
 
 #hour bins for count
 data$hr_cou=0
@@ -333,3 +345,64 @@ data$hr_cou[data$hour==8]=5
 data$hr_cou[data$hour>=19 & data$hour<21]=6
 data$hr_cou[data$hour==16]=7
 data$hr_cou[data$hour>=17 & data$hour<19]=8
+train$hr_cou=0
+train$hr_cou[train$hour<7]=1
+train$hr_cou[train$hour>=21]=2
+train$hr_cou[train$hour>8 & train$hour<16]=3
+train$hr_cou[train$hour==7]=4
+train$hr_cou[train$hour==8]=5
+train$hr_cou[train$hour>=19 & train$hour<21]=6
+train$hr_cou[train$hour==16]=7
+train$hr_cou[train$hour>=17 & train$hour<19]=8
+test$hr_cou=0
+
+#split the train variable into its own train & test sets
+train.index <- createDataPartition(paste(train$holiday,train$season,train$weather,train$workingday), p = 0.8, list = FALSE)
+newtrain <- train[train.index,]
+newtest <- train[-train.index,]
+
+
+#Ridge for rtcas
+x=model.matrix(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,train)[,-1]
+y=train$rtcas
+grid=10^seq(10,-2,length=100)
+ridge.mod=glmnet(x[train.index,],y[train.index],alpha=0,lambda=grid)
+cv.out=cv.glmnet(x[train.index,],y[train.index],alpha=0)
+plot(cv.out)
+bestlam=cv.out$lambda.min
+bestlam
+ytest=newtest$rtcas
+ridge.pred=predict(ridge.mod,s=bestlam,newx=x[-train.index,])
+mean((ridge.pred-ytest)^2)
+
+#Ridge for rtreg
+x2=model.matrix(rtreg~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,train)[,-1]
+y2=train$rtreg
+ridge.mod2=glmnet(x2[train.index,],y2[train.index],alpha=0,lambda=grid)
+cv.out2=cv.glmnet(x2[train.index,],y2[train.index],alpha=0)
+plot(cv.out2)
+bestlam2=cv.out2$lambda.min
+bestlam2
+ytest2=newtest$rtreg
+ridge.pred2=predict(ridge.mod2,s=bestlam2,newx=x2[-train.index,])
+mean((ridge.pred2-ytest2)^2)
+
+#Lasso for rtcas
+lasso.mod=glmnet(x[train.index,],y[train.index],alpha=1,lambda=grid)
+plot(lasso.mod)
+cv.out3=cv.glmnet(x[train.index,],y[train.index],alpha=1)
+plot(cv.out3)
+bestlam3=cv.out3$lambda.min
+bestlam3
+lasso.pred=predict(lasso.mod,s=bestlam3,newx=x[-train.index,])
+mean((lasso.pred-ytest)^2)
+
+#Lasso for rtreg
+lasso.mod2=glmnet(x2[train.index,],y2[train.index],alpha=1,lambda=grid)
+plot(lasso.mod2)
+cv.out4=cv.glmnet(x2[train.index,],y2[train.index],alpha=1)
+plot(cv.out4)
+bestlam4=cv.out4$lambda.min
+bestlam4
+lasso.pred2=predict(lasso.mod2,s=bestlam4,newx=x2[-train.index,])
+mean((lasso.pred2-ytest2)^2)
