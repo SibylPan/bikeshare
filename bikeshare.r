@@ -183,3 +183,7 @@ train$logcas <- log(train$casual + 1)
 
 data$logreg <- log(data$registered + 1)
 data$logcas <- log(data$casual + 1)
+
+train.index <- createDataPartition(paste(train$holiday,train$season,train$weather,train$workingday), p = 0.8, list = FALSE)
+newtrain <- train[train.index,]
+newtest <- train[-train.index,]
