@@ -178,6 +178,151 @@ corrplot(corr, method="color", col=col(200),
          # hide correlation coefficient on the principal diagonal
          diag=FALSE )
 
+
+# transform outcome variables
+addTransforms = function(X){
+  X = X %>%
+  gather(key = "Variable", value = "Value")
+  
+  X.log = X %>%
+  mutate(
+    Value = log(Value),
+    Variable = paste0("log(", Variable, ")"),
+    Transform = "Log(x)"
+  )  
+  
+  X.exp = X %>%
+  mutate(
+    Value = exp(-Value),
+    Variable = paste0("exp(-", Variable, ")"),
+    Transform = "exp(-x)"
+  )  
+  
+  X.inv = X %>%
+  mutate(
+    Value = 1/Value,
+    Variable = paste0("1/", Variable),
+    Transform = "1/x"
+  )  
+  
+  X.rt = X %>%
+  mutate(
+    Value = sqrt(Value),
+    Variable = paste0("sqrt(", Variable, ")"),
+    Transform = "sqrt(x)"
+  ) 
+  
+  X = X %>%
+    mutate(
+      Transform = "x"
+    )
+  
+  X = rbind(X, X.log, X.exp, X.inv, X.rt)
+  
+  X = X %>%
+    group_by(Variable, Transform) %>%
+    mutate(
+       valid = !(any(is.na(Value)) || any(is.infinite(Value)))) %>%
+    ungroup() %>%
+    filter(valid == TRUE)
+  
+  return(X)
+}
+
+ggRespEval = function(X){
+  X %>% 
+  group_by(Variable) %>%
+  mutate(shapiro.log.p = log(shapiro.test(Value)$p.value, base = 10)) %>%
+  ggplot(aes(x = Value, fill = shapiro.log.p)) +
+  geom_histogram(aes(y=..density..), color = "black", bins = 20) +
+  scale_fill_gradient(limits = c(-8, 0), na.value = "Black", low = "Black", high = "Blue") +
+  geom_density(alpha = 0.3, color = "red", fill = "black") +
+  facet_wrap(vars(Variable), scales = "free")
+}
+
+train_num$registered=train_num$registered+1
+train_num$casual=train_num$casual+1
+
+train.r=train_num[sample(nrow(train_num), 5000), ]
+drop <- c("casual","count")
+train.r= train.r[,!(names(train.r) %in% drop)]
+
+train.c=train_num[sample(nrow(train_num), 5000), ]
+drop <- c("registered","count")
+train.c= train.c[,!(names(train.c) %in% drop)]
+
+# transform registered
+var <- c("temp","atemp","humidity","windspeed")
+### No Transformation
+train.r %>% 
+  gather(key = "Variable", value = "Value", var) %>%
+  group_by(Variable) %>%
+  mutate(
+    Value = residuals(lm(train.r$registered ~ Value)),
+    Variable = paste0("residual of\nregistered ~ ", Variable)) %>%
+  ggRespEval()
+### Log
+train.r %>% 
+  gather(key = "Variable", value = "Value", var) %>%
+  group_by(Variable) %>%
+  mutate(
+    Value = residuals(lm(log(train.r$registered) ~ Value)),
+    Variable = paste0("residual of\nlog(registered) ~ ", Variable)) %>%
+  ggRespEval()
+### sqrt
+train.r %>% 
+  gather(key = "Variable", value = "Value", var) %>%
+  group_by(Variable) %>%
+  mutate(
+    Value = residuals(lm(sqrt(train.r$registered) ~ Value)),
+    Variable = paste0("residual of\nsqrt(registered) ~ ", Variable)) %>%
+  ggRespEval()
+
+### 1/registered 
+train.r  %>% 
+  gather(key = "Variable", value = "Value", var) %>%
+  group_by(Variable) %>%
+  mutate(
+    Value = residuals(lm(1/train.r$registered ~ Value)),
+    Variable = paste0("residual of\n1/registered ~ ", Variable)) %>%
+  ggRespEval()
+
+# transform casual 
+### No Transformation
+train.c %>% 
+  # select (-drop.cols))%>% 
+  gather(key = "Variable", value = "Value", var) %>%
+  group_by(Variable) %>%
+  mutate(
+    Value = residuals(lm(train.c$casual ~ Value)),
+    Variable = paste0("residual of\ncasual ~ ", Variable)) %>%
+  ggRespEval()
+### Log
+train.c %>% 
+  gather(key = "Variable", value = "Value", var) %>%
+  group_by(Variable) %>%
+  mutate(
+    Value = residuals(lm(log(train.c$casual) ~ Value)),
+    Variable = paste0("residual of\nlog(casual) ~ ", Variable)) %>%
+  ggRespEval()
+### sqrt
+train.c %>% 
+  gather(key = "Variable", value = "Value", var) %>%
+  group_by(Variable) %>%
+  mutate(
+    Value = residuals(lm(sqrt(train.c$casual) ~ Value)),
+    Variable = paste0("residual of\nsqrt(casual) ~ ", Variable)) %>%
+  ggRespEval()
+
+### 1/casual 
+train.c  %>% 
+  gather(key = "Variable", value = "Value", var) %>%
+  group_by(Variable) %>%
+  mutate(
+    Value = residuals(lm(1/train.c$casual ~ Value)),
+    Variable = paste0("residual of\n1/casual ~ ", Variable)) %>%
+  ggRespEval()
+
 train$logreg <- log(train$registered + 1)
 train$logcas <- log(train$casual + 1)
 
@@ -187,3 +332,4 @@ data$logcas <- log(data$casual + 1)
 train.index <- createDataPartition(paste(train$holiday,train$season,train$weather,train$workingday), p = 0.8, list = FALSE)
 newtrain <- train[train.index,]
 newtest <- train[-train.index,]
+
