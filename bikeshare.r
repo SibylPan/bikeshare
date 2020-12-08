@@ -323,13 +323,21 @@ train.c  %>%
     Variable = paste0("residual of\n1/casual ~ ", Variable)) %>%
   ggRespEval()
 
-train$logreg <- log(train$registered + 1)
-train$logcas <- log(train$casual + 1)
+train$rtreg <- sqrt(train$registered)
+train$rtcas <- sqrt(train$casual)
 
-data$logreg <- log(data$registered + 1)
-data$logcas <- log(data$casual + 1)
+data$rtreg <- sqrt(data$registered)
+data$rtcas <- sqrt(data$casual)
+
+test$rtreg <- 0
+test$rtcas <- 0
+
+train$hour=as.integer(train$hour) # convert hour to integer
+test$hour=as.integer(test$hour) # modifying in both train and test data set
 
 train.index <- createDataPartition(paste(train$holiday,train$season,train$weather,train$workingday), p = 0.8, list = FALSE)
 newtrain <- train[train.index,]
 newtest <- train[-train.index,]
 
+d=rpart(rtreg~hour,data=train)
+fancyRpartPlot(d)
