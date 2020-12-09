@@ -372,7 +372,7 @@ train.index <- createDataPartition(paste(train$holiday,train$season,train$weathe
 newtrain <- train[train.index,]
 newtest <- train[-train.index,]
 
-
+########################
 #Ridge for rtcas
 x=model.matrix(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,train)[,-1]
 y=train$rtcas
@@ -444,6 +444,61 @@ val.errors2
 b<-which.min(val.errors2)
 plot(val.errors2,type='b')
 points(b, val.errors[b], col="red", cex=2, pch=20)
+
+########################
+#Stepwise for rtcas
+#forward
+regfit.fwdcas=regsubsets(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,data=newtrain,nvmax=14,method="forward",really.big=TRUE)
+test.matfwdcas=model.matrix(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,data=newtest,method="forward")
+val.errors3=rep(NA,14)
+for(i in 1:14){
+  coefi3=coef(regfit.fwdcas,id=i)
+  pred3=test.matfwdcas[,names(coefi3)]%*%coefi3
+  val.errors3[i]=mean((newtest$rtcas-pred)^2) }
+val.errors3
+c<-which.min(val.errors3)
+plot(val.errors3,type='b')
+points(c, val.errors3[c], col="red", cex=2, pch=20)
+
+#backward
+regfit.bwdcas=regsubsets(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,data=newtrain,nvmax=14,method="backward",really.big=TRUE)
+test.matbwdcas=model.matrix(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,data=newtest,method="backward")
+val.errors4=rep(NA,14)
+for(i in 1:14){
+  coefi4=coef(regfit.bwdcas,id=i)
+  pred=test.matbwdcas[,names(coefi4)]%*%coefi4
+  val.errors4[i]=mean((newtest$rtcas-pred)^2) }
+val.errors4
+d<-which.min(val.errors4)
+plot(val.errors4,type='b')
+points(d, val.errors4[d], col="red", cex=2, pch=20)
+
+#Stepwise for rtreg:
+#forward
+regfit.fwdreg=regsubsets(rtreg~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,data=newtrain,nvmax=14,method="forward",really.big=TRUE)
+test.matfwdreg=model.matrix(rtreg~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,data=newtest,method="forward")
+val.errors5=rep(NA,14)
+for(i in 1:14){
+  coefi5=coef(regfit.fwdreg,id=i)
+  pred5=test.matfwdreg[,names(coefi5)]%*%coefi5
+  val.errors5[i]=mean((newtest$rtreg-pred)^2) }
+val.errors5
+e<-which.min(val.errors5)
+plot(val.errors5,type='b')
+points(e, val.errors3[e], col="red", cex=2, pch=20)
+
+#backward
+regfit.bwdreg=regsubsets(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,data=newtrain,nvmax=14,method="backward",really.big=TRUE)
+test.matbwdreg=model.matrix(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,data=newtest,method="backward")
+val.errors6=rep(NA,14)
+for(i in 1:14){
+  coefi6=coef(regfit.bwdreg,id=i)
+  pred=test.matbwdreg[,names(coefi6)]%*%coefi6
+  val.errors6[i]=mean((newtest$rtreg-pred)^2) }
+val.errors6
+f<-which.min(val.errors6)
+plot(val.errors6,type='b')
+points(f, val.errors4[f], col="red", cex=2, pch=20)
 
 
 ####################
