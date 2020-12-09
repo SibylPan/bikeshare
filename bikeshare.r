@@ -30,6 +30,8 @@ summary(train)
 test$registered=0
 test$casual=0
 test$count=0
+train$source="train" ##please see if this helps to simplify the code
+test$source="test" ##please see if this helps to simplify the code
 data=rbind(train,test)
 
 # check missing values: no missing values
@@ -357,6 +359,12 @@ train$hr_cou[train$hour>=19 & train$hour<21]=6
 train$hr_cou[train$hour==16]=7
 train$hr_cou[train$hour>=17 & train$hour<19]=8
 test$hr_cou=0
+
+####split the data back to train and test
+train <- data %>%
+  filter(source=="train")
+test <- data %>%
+  filter(source=="test")
 
 #split the train variable into its own train & test sets
 train.index <- createDataPartition(paste(train$holiday,train$season,train$weather,train$workingday), p = 0.8, list = FALSE)
