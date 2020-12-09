@@ -546,3 +546,203 @@ write.csv(result, file="submit_result_trans_nohrbin_rf.csv",row.names=FALSE)
 pred.boost.total=(pred.boost.cas)^2+(pred.boost.reg)^2
 result2 <- data.frame(datetime = test$datetime, count=pred.boost.total)
 write.csv(result2, file="submit_result_trans_nohrbin_boost.csv",row.names=FALSE)
+
+##########################
+#Non-linear models
+##########################
+
+library(gam)
+
+newtrain %>%
+  select(temp, humidity,rtreg,windspeed) %>%
+  gather(-rtreg, key = "var", value = "value") %>%
+  ggplot(aes(x = value, y = rtreg)) +
+  geom_point() +
+  stat_smooth() +
+  facet_wrap(~ var, scales = "free") +
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))+
+  theme_bw()
+
+newtrain %>%
+  select(temp,humidity,rtcas,windspeed) %>%
+  gather(-rtcas, key = "var", value = "value") %>%
+  ggplot(aes(x = value, y = rtcas)) +
+  geom_point() +
+  stat_smooth() +
+  facet_wrap(~ var, scales = "free") +
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))+
+  theme_bw()
+
+##################################
+# model for registered rentals
+##################################
+
+# linear 
+fit.lm <- lm(rtreg~season+holiday+workingday+weather+temp+humidity+windspeed+hr_reg+day+year, data = newtrain)
+yhat.lm <- predict(fit.lm, newtest)
+mse.lm <- mean((newtest$rtreg - yhat.lm)^2)
+mse.lm
+summary(fit.lm)
+
+tidy_lmfit <- tidy(fit.lm)
+write.csv(tidy_lmfit, file="regression1.csv",row.names=FALSE)
+
+# polynomial 2
+fit.1 <- lm(rtreg ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,2)+poly(humidity,2)+poly(windspeed,2), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtreg - yhat.1)^2)
+mse.1
+
+# polynomial 3
+fit.1 <- lm(rtreg ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,3)+poly(humidity,3)+poly(windspeed,3), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtreg - yhat.1)^2)
+mse.1
+
+# polynomial 4
+fit.1 <- lm(rtreg ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,4)+poly(humidity,4)+poly(windspeed,4), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtreg - yhat.1)^2)
+mse.1
+
+# polynomial 3 -holiday -windspeed
+fit.1 <- lm(rtreg ~ season+workingday+weather+hr_reg+day+year +
+              poly(temp,3)+poly(humidity,3), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtreg - yhat.1)^2)
+mse.1
+
+# interactions temp*humidity
+fit.1 <- lm(rtreg ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,3)+poly(humidity,3)+poly(windspeed,3)+poly(temp,3)*poly(humidity,3), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtreg - yhat.1)^2)
+mse.1
+
+# interactions temp*season
+fit.1 <- lm(rtreg ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,3)+poly(humidity,3)+poly(windspeed,3)+poly(temp,3)*season, data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtreg - yhat.1)^2)
+mse.1
+
+# interactions humidity*season
+fit.1 <- lm(rtreg ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,3)+poly(humidity,3)+poly(windspeed,3)+poly(humidity,3)*season, data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtreg - yhat.1)^2)
+mse.1
+
+# gam
+# smoothing splines
+gam <- glm(data = newtrain, rtreg ~ as.factor(season) + as.factor(hr_reg) + as.factor(day) + 
+                   as.factor(holiday) + as.factor(weather) + s(temp)  + s(humidity) + s(windspeed))
+summary(gam2)
+preds=predict(gam,newdata=newtest)
+mse <- mean((newtest$rtreg - preds)^2)
+mse
+plot(newtest$rtreg, preds, xlab = "Actual", ylab = "Predicted", main = "Actual vs Predicted")
+abline(0,1,col="red")
+
+# local regression
+gam <- glm(data = newtrain, rtreg ~ as.factor(season) + as.factor(hr_reg) + as.factor(day) + 
+             as.factor(holiday) + as.factor(weather) + lo(temp,span=0.7)  +lo(humidity,span=0.7) + lo(windspeed,span=0.7))
+summary(gam2)
+preds=predict(gam,newdata=newtest)
+mse <- mean((newtest$rtreg - preds)^2)
+mse
+
+
+##################################
+# model for casual rentals
+##################################
+
+# linear 
+fit.lm <- lm(rtcas~season+holiday+workingday+weather+temp+humidity+windspeed+hr_reg+day+year, data = newtrain)
+yhat.lm <- predict(fit.lm, newtest)
+mse.lm <- mean((newtest$rtcas - yhat.lm)^2)
+mse.lm
+summary(fit.lm)
+
+tidy_lmfit <- tidy(fit.lm)
+write.csv(tidy_lmfit, file="regression1.csv",row.names=FALSE)
+
+# polynomial 2
+fit.1 <- lm(rtcas ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,2)+poly(humidity,2)+poly(windspeed,2), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtcas - yhat.1)^2)
+mse.1
+
+# polynomial 3
+fit.1 <- lm(rtcas ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,3)+poly(humidity,3)+poly(windspeed,3), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtcas - yhat.1)^2)
+mse.1
+
+# polynomial 4
+fit.1 <- lm(rtcas ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,4)+poly(humidity,4)+poly(windspeed,4), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtcas - yhat.1)^2)
+mse.1
+
+# polynomial 5
+fit.1 <- lm(rtcas ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,5)+poly(humidity,5)+poly(windspeed,5), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtcas - yhat.1)^2)
+mse.1
+
+# polynomial 3 -holiday -windspeed
+fit.1 <- lm(rtcas ~ season+workingday+weather+hr_reg+day+year +
+              poly(temp,3)+poly(humidity,3), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtcas - yhat.1)^2)
+mse.1
+
+# interactions temp*humidity
+fit.1 <- lm(rtcas ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,3)+poly(humidity,3)+poly(windspeed,3)+poly(temp,3)*poly(humidity,3), data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtcas - yhat.1)^2)
+mse.1
+
+# interactions temp*season
+fit.1 <- lm(rtcas ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,3)+poly(humidity,3)+poly(windspeed,3)+poly(temp,3)*season, data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtcas - yhat.1)^2)
+mse.1
+
+# interactions humidity*season
+fit.1 <- lm(rtcas ~ season+holiday+workingday+weather+hr_reg+day+year +
+              poly(temp,3)+poly(humidity,3)+poly(windspeed,3)+poly(humidity,3)*season, data = newtrain)
+yhat.1 <- predict(fit.1, newtest)
+mse.1 <- mean((newtest$rtcas - yhat.1)^2)
+mse.1
+
+# gam
+# smoothing splines
+gam <- glm(data = newtrain, rtcas ~ as.factor(season) + as.factor(hr_reg) + as.factor(day) + 
+             as.factor(holiday) + as.factor(weather) + s(temp)  + s(humidity) + s(windspeed))
+summary(gam2)
+preds=predict(gam,newdata=newtest)
+mse <- mean((newtest$rtcas - preds)^2)
+mse
+plot(newtest$rtcas, preds, xlab = "Actual", ylab = "Predicted", main = "Actual vs Predicted")
+abline(0,1,col="red")
+
+# local regression
+gam <- glm(data = newtrain, rtcas ~ as.factor(season) + as.factor(hr_reg) + as.factor(day) + 
+             as.factor(holiday) + as.factor(weather) + lo(temp,span=0.7)  +lo(humidity,span=0.7) + lo(windspeed,span=0.7))
+summary(gam2)
+preds=predict(gam,newdata=newtest)
+mse <- mean((newtest$rtcas - preds)^2)
+mse
+
+
