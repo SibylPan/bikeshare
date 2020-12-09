@@ -367,6 +367,7 @@ test <- data %>%
   filter(source=="test")
 
 #split the train variable into its own train & test sets
+set.seed(1)
 train.index <- createDataPartition(paste(train$holiday,train$season,train$weather,train$workingday), p = 0.8, list = FALSE)
 newtrain <- train[train.index,]
 newtest <- train[-train.index,]
@@ -416,6 +417,34 @@ bestlam4=cv.out4$lambda.min
 bestlam4
 lasso.pred2=predict(lasso.mod2,s=bestlam4,newx=x2[-train.index,])
 mean((lasso.pred2-ytest2)^2)
+
+########################
+#Best Subsets for rtcas:
+regfit.best=regsubsets(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,data=newtrain,nvmax=14,really.big=TRUE)
+test.mat=model.matrix(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,data=newtest)
+val.errors=rep(NA,14)
+for(i in 1:14){
+  coefi=coef(regfit.best,id=i)
+  pred=test.mat[,names(coefi)]%*%coefi
+  val.errors[i]=mean((newtest$rtcas-pred)^2) }
+val.errors
+a<-which.min(val.errors)
+plot(val.errors,type='b')
+points(a, val.errors[a], col="red", cex=2, pch=20)
+
+#Best Subsets for rtreg:
+regfit.best2=regsubsets(rtreg~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,data=newtrain,nvmax=14,really.big=TRUE)
+test.mat2=model.matrix(rtreg~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,data=newtest)
+val.errors2=rep(NA,14)
+for(i in 1:14){
+  coefi2=coef(regfit.best2,id=i)
+  pred2=test.mat[,names(coefi2)]%*%coefi2
+  val.errors2[i]=mean((newtest$rtreg-pred)^2) }
+val.errors2
+b<-which.min(val.errors2)
+plot(val.errors2,type='b')
+points(b, val.errors[b], col="red", cex=2, pch=20)
+
 
 ####################
 #Random forest
