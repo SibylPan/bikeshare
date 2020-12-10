@@ -376,17 +376,14 @@ test$hr_cou[data$hour==8]=5
 test$hr_cou[data$hour>=19 & data$hour<21]=6
 test$hr_cou[data$hour==16]=7
 test$hr_cou[data$hour>=17 & data$hour<19]=8
+
+
 #split the train variable into its own train & test sets
 set.seed(1)
 train.index <- createDataPartition(paste(train$holiday,train$season,train$weather,train$workingday), p = 0.8, list = FALSE)
 newtrain <- train[train.index,]
 newtest <- train[-train.index,]
 
-newdata <- rbind(train,test)
-train<-newdata[1:nrow(train),]
-test<-newdata[-(1:nrow(train)),]
-newtrain <- train[train.index,]
-newtest <- train[-train.index,]
 #Ridge for rtcas
 x=model.matrix(rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,train)[,-1]
 y=train$rtcas
@@ -455,6 +452,7 @@ lpred.lasso.count=(lpredcas)^2+(lpredreg)^2
 resultl <- data.frame(datetime = test$datetime, count=lpred.lasso.count)
 colnames(resultl)<-c("datetime","count")
 write.csv(resultl, file="submit_result_lasso.csv",row.names=FALSE)
+
 
 ####################
 #Random forest
