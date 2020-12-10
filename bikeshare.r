@@ -30,8 +30,6 @@ summary(train)
 test$registered=0
 test$casual=0
 test$count=0
-train$source="train" ##please see if this helps to simplify the code
-test$source="test" ##please see if this helps to simplify the code
 data=rbind(train,test)
 
 # check missing values: no missing values
@@ -325,6 +323,13 @@ train$hr_reg[train$hour==8]=5
 train$hr_reg[train$hour>=19 & train$hour<21]=6
 train$hr_reg[train$hour>=17 & train$hour<19]=7
 test$hr_reg=0
+test$hr_reg[data$hour<7]=1
+test$hr_reg[data$hour>=21]=2
+test$hr_reg[data$hour>8 & data$hour<17]=3
+test$hr_reg[data$hour==7]=4
+test$hr_reg[data$hour==8]=5
+test$hr_reg[data$hour>=19 & data$hour<21]=6
+test$hr_reg[data$hour>=17 & data$hour<19]=7
 
 #hour bins for casual
 data$hr_cas=0
@@ -338,6 +343,10 @@ train$hr_cas[train$hour==8 | train$hour==9]=2
 train$hr_cas[train$hour>=20]=3
 train$hr_cas[train$hour>9 & train$hour<20]=4
 test$hr_cas=0
+test$hr_cas[data$hour<=7]=1
+test$hr_cas[data$hour==8 | data$hour==9]=2
+test$hr_cas[data$hour>=20]=3
+test$hr_cas[data$hour>9 & data$hour<20]=4
 
 #hour bins for count
 data$hr_cou=0
@@ -359,12 +368,14 @@ train$hr_cou[train$hour>=19 & train$hour<21]=6
 train$hr_cou[train$hour==16]=7
 train$hr_cou[train$hour>=17 & train$hour<19]=8
 test$hr_cou=0
-
-####split the data back to train and test
-train <- data %>%
-  filter(source=="train")
-test <- data %>%
-  filter(source=="test")
+test$hr_cou[data$hour<7]=1
+test$hr_cou[data$hour>=21]=2
+test$hr_cou[data$hour>8 & data$hour<16]=3
+test$hr_cou[data$hour==7]=4
+test$hr_cou[data$hour==8]=5
+test$hr_cou[data$hour>=19 & data$hour<21]=6
+test$hr_cou[data$hour==16]=7
+test$hr_cou[data$hour>=17 & data$hour<19]=8
 
 #split the train variable into its own train & test sets
 set.seed(1)
@@ -508,135 +519,183 @@ library(randomForest)
 newtrain <- newtrain[,-1]
 newtest <- newtest[,-1]
 
-#sqrt transformed rf (same results as nontransformed)
 #casual
-oob.err.cas2=double(11)
-test.err.cas2=double(11)
-formula <- rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+oob.err.cas <- matrix(, nrow = 4, ncol = 8)
+test.err.cas <- matrix(, nrow = 4, ncol = 8)
+formula.cas <- rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+day+year+hour
 set.seed(1)
-for(mtry in 1:11){
-  fit=randomForest(formula,data=newtrain,mtry=mtry,ntree=400)
-  oob.err.cas2[mtry]=fit$mse[400]
-  pred=predict(fit,newdata=newtest)
-  test.err.cas2[mtry]=with(newtest,mean((rtcas-pred)^2))
-  cat(mtry," ")
+tree=c(250,300,350,400)
+try=c(3,4,5,6,7,8,9,10)
+for(i in 1:4){
+  for(j in 1:8) {
+    ntree=tree[i]
+    mtry=try[j]
+    fit=randomForest(formula.cas,data=newtrain,mtry=mtry,ntree=ntree)
+    oob.err.cas[i,j]=fit$mse[ntree]
+    pred=predict(fit,newdata=newtest)
+    test.err.cas[i,j]=with(newtest,mean((rtcas-pred)^2))
+  }
 }
-
-matplot(1:11,cbind(test.err.cas2,oob.err.cas2),pch=19,col=c("red","blue"),type="b", xlab="mtry",
-        ylab="Mean Squared Error")
-legend("topright",legend=c("Test","OOB"),pch=19,col=c("red","blue"))
-##minimum err occurred at mtry=7,test error=1.089
+par(mfrow=c(1,2))
+matplot(t(test.err.cas),type="l",main = "rtcas", xlab='mtry', xaxt="n",ylab='Mean Squared Error (test)', col=1:4)
+legend('topright', inset=.05, legend=c("250","300","350","400"), 
+       pch=19, horiz=TRUE, col=1:4, title="ntree")
+axis(1, at=1:8, labels=seq(3,10,by=1))
+##minimum err occurred at ntree=300 ,mtry=5,test error=1.077
 
 set.seed(1)
-formula <- rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
-rf.cas2=randomForest(formula,data=train[,-1],mtry=7,importance=TRUE,ntree=400)
-rf.cas2
-importance(rf.cas2)
-varImpPlot(rf.cas2)
-pred.cas2=predict(rf.cas2,newdata=test[,-1])
+rf.cas=randomForest(formula.cas,data=train[,-1],mtry=5,importance=TRUE,ntree=300)
+rf.cas
+importance(rf.cas)
+varImpPlot(rf.cas)
+pred.cas=predict(rf.cas,newdata=test[,-1])
 
 #registered
-oob.err.reg2=double(11)
-test.err.reg2=double(11)
-formula <- rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
+oob.err.reg<- matrix(, nrow = 4, ncol = 8)
+test.err.reg<- matrix(, nrow = 4, ncol = 8)
+formula.reg <- rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+day+year+hour
 set.seed(1)
-for(mtry in 1:11){
-  fit=randomForest(formula,data=newtrain,mtry=mtry,ntree=400)
-  oob.err.reg2[mtry]=fit$mse[400]
-  pred=predict(fit,newdata=newtest)
-  test.err.reg2[mtry]=with(newtest,mean((rtreg-pred)^2))
-  cat(mtry," ")
+tree=c(250,300,350,400)
+try=c(3,4,5,6,7,8,9,10)
+for(i in 1:4){
+  for(j in 1:8) {
+    ntree=tree[i]
+    mtry=try[j]
+    fit=randomForest(formula.reg,data=newtrain,mtry=mtry,ntree=ntree)
+    oob.err.reg[i,j]=fit$mse[mtry]
+    pred=predict(fit,newdata=newtest)
+    test.err.reg[i,j]=with(newtest,mean((rtreg-pred)^2))
+  }
 }
 
-matplot(1:11,cbind(test.err.reg2,oob.err.cas2),pch=19,col=c("red","blue"),type="b", xlab="mtry",
-        ylab="Mean Squared Error")
-legend("topright",legend=c("Test","OOB"),pch=19,col=c("red","blue"))
-##minimum err occurred at mtry=8,test error=1.457
+matplot(t(test.err.reg),type="l",main = "rtreg", xlab='mtry', xaxt="n",ylab='Mean Squared Error (test)', col=1:4)
+legend('topright', inset=.05, legend=c("250","300","350","400"), 
+       pch=19, horiz=TRUE, col=1:4, title="ntree")
+axis(1, at=1:8, labels=seq(3,10,by=1))
+##minimum err occurred at ntree=400, mtry=7,test error=1.534
 
 set.seed(1)
-formula <- rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
-rf.reg2=randomForest(formula,data=train[,-1],mtry=8,importance=TRUE,ntree=400)
-rf.reg2
-importance(rf.reg2)
-varImpPlot(rf.reg2)
-pred.reg2=predict(rf.reg2,newdata=test[,-1])
+rf.reg=randomForest(formula.reg,data=train[,-1],mtry=7,importance=TRUE,ntree=400)
+rf.reg
+importance(rf.reg)
+varImpPlot(rf.reg)
+pred.reg=predict(rf.reg,newdata=test[,-1])
+
+#final prediction
+pred.rf.count=(pred.cas)^2+(pred.reg)^2
 
 ########################
-#boosting on sqrt transformed data
+#boosting
 ########################
 library(gbm)
 #casual
 set.seed(1)
-formula <- rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
-shr=c(0.001,0.005,0.01,0.05,0.1)
+shr=c(0.01,0.05,0.1)
+depth=c(1,2,3,4,5,6)
 n.trees=seq(from=100,to=10000,by=100)
-for (i in 1:5) {
+for (i in 1:3) {
+  for (j in 1:6) {
   shrinkage=shr[i]
-  boost.cas=gbm(formula,data=newtrain,distribution="gaussian",
-                n.trees=10000,interaction.depth=4,shrinkage=shrinkage,verbose=F)
+  interaction.depth=depth[j]
+  boost.cas=gbm(formula.cas,data=newtrain,distribution="gaussian",
+                n.trees=10000,interaction.depth=interaction.depth,shrinkage=shrinkage,verbose=F)
   predmat=predict(boost.cas,newdata=newtest,n.trees=n.trees)
   berr=with(newtest,apply((predmat-rtcas)^2,2,mean))
-  assign(paste("predmat", i, sep = ""), predmat) 
-  assign(paste("berr", i, sep = ""), berr)
+  assign(paste("predmat.cas", i,j, sep = ""), predmat) 
+  assign(paste("berr.cas", i,j,sep = ""), berr)
+  }
 }
-par(mfrow=c(3,2))
-plot(n.trees,berr1,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
-plot(n.trees,berr2,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
-plot(n.trees,berr3,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
-plot(n.trees,berr4,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
-plot(n.trees,berr5,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
 
-matplot(n.trees,cbind(berr4,berr5),pch=19,col=c("red","blue"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
-legend("topright",title="Shrinkage",legend=c("0.05","0.1"),pch=19,col=c("red","blue"))
-abline(h=min(test.err.cas2),col="black")
-#choose shrinkage=0.05, n.tree=10000
+par(mfrow=c(1,3))
+matplot(n.trees,cbind(berr.cas11,berr.cas11,berr.cas13,berr.cas14,berr.cas15,berr.cas16),type="l",pch=19,
+        col=c("red","blue","green","orange","purple","navy"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error (shrinkage=0.01)")
+legend("topright",title="Depth",legend=c("1","2","3","4","5","6"),pch=19,inset=0.02,
+       col=c("red","blue","green","orange","purple","navy"))
+abline(h=min(test.err.cas),col="black")
 
-formula <- rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
-boost.cas=gbm(formula,data=train[,-1],distribution="gaussian",
-              n.trees=10000,interaction.depth=4,shrinkage=0.1,verbose=F)
-pred.boost.cas=predict(boost.cas,newdata=test[,-1],n.trees=10000)
+matplot(n.trees,cbind(berr.cas21,berr.cas21,berr.cas23,berr.cas24,berr.cas25,berr.cas26),type="l",pch=19,
+        col=c("red","blue","green","orange","purple","navy"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error (shrinkage=0.05)")
+legend("topright",title="Depth",legend=c("1","2","3","4","5","6"),pch=19,inset=0.02,
+       col=c("red","blue","green","orange","purple","navy"))
+abline(h=min(test.err.cas),col="black")
+
+matplot(n.trees,cbind(berr.cas31,berr.cas31,berr.cas33,berr.cas34,berr.cas35,berr.cas36),type="l",pch=19,
+        col=c("red","blue","green","orange","purple","navy"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error (shrinkage=0.1)")
+legend("topright",title="Depth",legend=c("1","2","3","4","5","6"),pch=19,inset=0.02,
+       col=c("red","blue","green","orange","purple","navy"))
+abline(h=min(test.err.cas),col="black")
+
+par(mfrow=c(1,1))
+matplot(n.trees,cbind(berr.cas16,berr.cas26,berr.cas36),type="l",pch=19,
+        col=c("red","blue","green"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error (depth=6)")
+legend("topright",title="Shrinkage",legend=c("0.01","0.05","0.1"),pch=19,inset=0.02,
+       col=c("red","blue","green"),cex=0.8)
+abline(h=min(test.err.cas),col="black")
+
+#choose shrinkage=0.05, n.tree=5000, depth=6
+boost.cas=gbm(formula.cas,data=train[,-1],distribution="gaussian",
+              n.trees=5000,interaction.depth=6,shrinkage=0.05,verbose=F)
+pred.boost.cas=predict(boost.cas,newdata=test[,-1],n.trees=5000)
 
 #registered
 set.seed(1)
-formula <- rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
-shr=c(0.001,0.005,0.01,0.05,0.1)
+shr=c(0.01,0.05,0.1)
 n.trees=seq(from=100,to=10000,by=100)
-for (i in 1:5) {
+depth=c(1,2,3,4,5,6)
+for (i in 1:3) {
+  for (j in 1:6) {
   shrinkage=shr[i]
-  boost.reg=gbm(formula,data=newtrain,distribution="gaussian",
-                n.trees=10000,interaction.depth=4,shrinkage=shrinkage,verbose=F)
+  interaction.depth=depth[j]
+  boost.reg=gbm(formula.reg,data=newtrain,distribution="gaussian",
+                n.trees=10000,interaction.depth=interaction.depth,shrinkage=shrinkage,verbose=F)
   predmat=predict(boost.reg,newdata=newtest,n.trees=n.trees)
   berr=with(newtest,apply((predmat-rtreg)^2,2,mean))
-  assign(paste("predmat", i, sep = ""), predmat) 
-  assign(paste("berr", i, sep = ""), berr)
+  assign(paste("predmat.reg", i,j, sep = ""), predmat) 
+  assign(paste("berr.reg", i,j, sep = ""), berr)
+  }
 }
-par(mfrow=c(3,2))
-plot(n.trees,berr1,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
-plot(n.trees,berr2,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
-plot(n.trees,berr3,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
-plot(n.trees,berr4,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
-plot(n.trees,berr5,pch=19,ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
+
+par(mfrow=c(1,3))
+matplot(n.trees,cbind(berr.reg11,berr.reg11,berr.reg13,berr.reg14,berr.reg15,berr.reg16),type="l",pch=19,
+        col=c("red","blue","green","orange","purple","navy"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error (shrinkage=0.01)")
+legend("topright",title="Depth",legend=c("1","2","3","4","5","6"),pch=19,inset=0.02,
+       col=c("red","blue","green","orange","purple","navy"))
+abline(h=min(test.err.reg),col="black")
+
+matplot(n.trees,cbind(berr.reg21,berr.reg21,berr.reg23,berr.reg24,berr.reg25,berr.reg26),type="l",pch=19,
+        col=c("red","blue","green","orange","purple","navy"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error (shrinkage=0.05)")
+legend("topright",title="Depth",legend=c("1","2","3","4","5","6"),pch=19,inset=0.02,
+       col=c("red","blue","green","orange","purple","navy"))
+abline(h=min(test.err.reg),col="black")
+
+matplot(n.trees,cbind(berr.reg31,berr.reg31,berr.reg33,berr.reg34,berr.reg35,berr.reg36),type="l",pch=19,
+        col=c("red","blue","green","orange","purple","navy"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error (shrinkage=0.1)")
+legend("topright",title="Depth",legend=c("1","2","3","4","5","6"),pch=19,inset=0.02,
+       col=c("red","blue","green","orange","purple","navy"))
+abline(h=min(test.err.reg),col="black")
 
 par(mfrow=c(1,1))
-matplot(n.trees,cbind(berr4,berr5),pch=19,col=c("red","blue"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error")
-legend("topright",title="Shrinkage",legend=c("0.05","0.1"),pch=19,col=c("red","blue"))
-abline(h=min(test.err.reg2),col="black")
-#choose shrinkage=0.05, n.tree=10000
+matplot(n.trees,cbind(berr.reg16,berr.reg26,berr.reg36),type="l",pch=19,
+        col=c("red","blue","green"),ylab="Mean Squared Error",xlab="# Trees",main="Boosting Test Error (depth=6)")
+legend("topright",title="Shrinkage",legend=c("0.01","0.05","0.1"),pch=19,inset=0.02,
+       col=c("red","blue","green"),cex=0.8)
+abline(h=min(test.err.reg),col="black")
+#choose shrinkage=0.05, n.tree=5000,depth=6
 
-formula <- rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+weekday+year+hour
-boost.reg=gbm(formula,data=train[,-1],distribution="gaussian",
-              n.trees=10000,interaction.depth=4,shrinkage=0.1,verbose=F)
-pred.boost.reg=predict(boost.reg,newdata=test[,-1],n.trees=10000)
+boost.reg=gbm(formula.reg,data=train[,-1],distribution="gaussian",
+              n.trees=5000,interaction.depth=6,shrinkage=0.05,verbose=F)
+pred.boost.reg=predict(boost.reg,newdata=test[,-1],n.trees=5000)
+
+#final prediction
+pred.boost.count=(pred.boost.cas)^2+(pred.boost.reg)^2
 
 ##########################
 #save results for kaggle submission
 ##########################
-pred.total=(pred.cas2)^2+(pred.reg2)^2
-result <- data.frame(datetime = test$datetime, count=pred.total)
+result <- data.frame(datetime = test$datetime, count=pred.rf.count)
 write.csv(result, file="submit_result_trans_nohrbin_rf.csv",row.names=FALSE)
 
-pred.boost.total=(pred.boost.cas)^2+(pred.boost.reg)^2
-result2 <- data.frame(datetime = test$datetime, count=pred.boost.total)
+result2 <- data.frame(datetime = test$datetime, count=pred.boost.count)
 write.csv(result2, file="submit_result_trans_nohrbin_boost.csv",row.names=FALSE)
 
 ##########################
