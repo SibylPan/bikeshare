@@ -389,6 +389,7 @@ x=model.matrix(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humid
 y=train$rtcas
 grid=10^seq(10,-2,length=100)
 ridge.mod=glmnet(x[train.index,],y[train.index],alpha=0,lambda=grid)
+plot(ridge.mod)
 cv.out=cv.glmnet(x[train.index,],y[train.index],alpha=0)
 plot(cv.out)
 bestlam=cv.out$lambda.min
@@ -401,6 +402,7 @@ mean((ridge.pred-ytest)^2)
 x2=model.matrix(rtreg~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,train)[,-1]
 y2=train$rtreg
 ridge.mod2=glmnet(x2[train.index,],y2[train.index],alpha=0,lambda=grid)
+plot(ridge.mod2)
 cv.out2=cv.glmnet(x2[train.index,],y2[train.index],alpha=0)
 plot(cv.out2)
 bestlam2=cv.out2$lambda.min
