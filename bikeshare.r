@@ -642,6 +642,20 @@ newtrain %>%
   scale_x_discrete(guide = guide_axis(check.overlap = TRUE))+
   theme_bw()
 
+newtrain %>%
+  ggplot(aes(x=temp, y=rtreg, group=weather)) +
+  geom_point() +
+  facet_grid(~ season)+
+  ggtitle("Square Root of Registered Rentals vs. Temperature by Season") +
+  ylab("Square Root of Registered Rentals")
+
+newtrain %>%
+  ggplot(aes(x=humidity, y=rtreg, group=weather)) +
+  geom_point() +
+  facet_grid(season)+
+  ggtitle("Square Root of Registered Rentals vs. Humidity by Season") +
+  ylab("Square Root of Number of Registered Rentals")
+
 ##################################
 # model for registered rentals
 ##################################
