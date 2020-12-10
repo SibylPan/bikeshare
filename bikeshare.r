@@ -383,7 +383,11 @@ train.index <- createDataPartition(paste(train$holiday,train$season,train$weathe
 newtrain <- train[train.index,]
 newtest <- train[-train.index,]
 
-########################
+newdata <- rbind(train,test)
+train<-newdata[1:nrow(train),]
+test<-newdata[-(1:nrow(train)),]
+newtrain <- train[train.index,]
+newtest <- train[-train.index,]
 #Ridge for rtcas
 x=model.matrix(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,train)[,-1]
 y=train$rtcas
@@ -411,6 +415,14 @@ ytest2=newtest$rtreg
 ridge.pred2=predict(ridge.mod2,s=bestlam2,newx=x2[-train.index,])
 mean((ridge.pred2-ytest2)^2)
 
+#Ridge Final Prediction
+xtest=model.matrix(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,test)[,-1]
+x2test=model.matrix(rtreg~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,test)[,-1]
+rpredcas=predict(ridge.mod,s=bestlam,newx=xtest)
+rpredreg=predict(ridge.mod2,s=bestlam2,newx=x2test)
+
+rpred.ridge.count=(rpredcas)^2+(rpredreg)^2
+
 #Lasso for rtcas
 lasso.mod=glmnet(x[train.index,],y[train.index],alpha=1,lambda=grid)
 plot(lasso.mod)
@@ -430,6 +442,12 @@ bestlam4=cv.out4$lambda.min
 bestlam4
 lasso.pred2=predict(lasso.mod2,s=bestlam4,newx=x2[-train.index,])
 mean((lasso.pred2-ytest2)^2)
+
+#Lasso final prediction
+lpredcas=predict(lasso.mod,s=bestlam3,newx=xtest)
+lpredreg=predict(lasso.mod2,s=bestlam4,newx=x2test)
+
+lpred.lasso.count=(lpredcas)^2+(lpredreg)^2
 
 
 ####################
