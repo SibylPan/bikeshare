@@ -299,11 +299,11 @@ library(rattle)
 library(rpart.plot)
 library(RColorBrewer)
 reg.bin=rpart(registered~hour,data=train)
-fancyRpartPlot(reg.bin)
+fancyRpartPlot(reg.bin, main="registered", palettes=c("Greys"),type=2)
 cas.bin=rpart(casual~hour,data=train)
-fancyRpartPlot(cas.bin)
+fancyRpartPlot(cas.bin, main="casual", palettes=c("Greys"),type=2)
 cou.bin=rpart(count~hour,data=train)
-fancyRpartPlot(cou.bin)
+fancyRpartPlot(cou.bin, main="count", palettes=c("Greys"),type=2)
 
 ###hour bins for registered
 data$hr_reg=0
