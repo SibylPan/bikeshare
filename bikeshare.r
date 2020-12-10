@@ -376,7 +376,6 @@ test$hr_cou[data$hour==8]=5
 test$hr_cou[data$hour>=19 & data$hour<21]=6
 test$hr_cou[data$hour==16]=7
 test$hr_cou[data$hour>=17 & data$hour<19]=8
-
 #split the train variable into its own train & test sets
 set.seed(1)
 train.index <- createDataPartition(paste(train$holiday,train$season,train$weather,train$workingday), p = 0.8, list = FALSE)
@@ -389,81 +388,73 @@ test<-newdata[-(1:nrow(train)),]
 newtrain <- train[train.index,]
 newtest <- train[-train.index,]
 #Ridge for rtcas
-x=model.matrix(rtcas~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,newdata)[,-1]
+x=model.matrix(rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,train)[,-1]
 y=train$rtcas
 grid=10^seq(10,-2,length=100)
-ridge.mod=glmnet(x[1:nrow(newtrain),],y[1:nrow(newtrain)],alpha=0,lambda=grid)
+ridge.mod=glmnet(x[train.index,],y[train.index],alpha=0,lambda=grid)
 plot(ridge.mod)
-cv.out=cv.glmnet(x[1:nrow(newtrain),],y[1:nrow(newtrain)],alpha=0)
+cv.out=cv.glmnet(x[train.index,],y[train.index],alpha=0)
 plot(cv.out)
 bestlam=cv.out$lambda.min
 bestlam
 ytest=newtest$rtcas
-ridge.pred=predict(ridge.mod,s=bestlam,newx=x[(1+nrow(newtrain)):(nrow(newtrain)+nrow(newtest)),])
+ridge.pred=predict(ridge.mod,s=bestlam,newx=x[-train.index,])
 mean((ridge.pred-ytest)^2)
 
-
 #Ridge for rtreg
-x2=model.matrix(rtreg~datetime+season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,newdata)[,-1]
+x2=model.matrix(rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,train)[,-1]
 y2=train$rtreg
-ridge.mod2=glmnet(x2[1:nrow(newtrain),],y2[1:nrow(newtrain)],alpha=0,lambda=grid)
+ridge.mod2=glmnet(x2[train.index,],y2[train.index],alpha=0,lambda=grid)
 plot(ridge.mod2)
-cv.out2=cv.glmnet(x2[1:nrow(newtrain),],y2[1:nrow(newtrain)],alpha=0)
+cv.out2=cv.glmnet(x2[train.index,],y2[train.index],alpha=0)
 plot(cv.out2)
 bestlam2=cv.out2$lambda.min
 bestlam2
 ytest2=newtest$rtreg
-ridge.pred2=predict(ridge.mod2,s=bestlam2,newx=x2[(1+nrow(newtrain)):(nrow(newtrain)+nrow(newtest)),])
+ridge.pred2=predict(ridge.mod2,s=bestlam2,newx=x2[-train.index,])
 mean((ridge.pred2-ytest2)^2)
 
 #Ridge Final Prediction
-rpredcas=predict(ridge.mod,s=bestlam,newx=x[(nrow(newtrain)+nrow(newtest)+1):(nrow(newdata)),])
-rpredreg=predict(ridge.mod2,s=bestlam2,newx=x2[(nrow(newtrain)+nrow(newtest)+1):(nrow(newdata)),])
+xtest=model.matrix(rtcas~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_cas+day+year+month+date,test)[,-1]
+x2test=model.matrix(rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,test)[,-1]
+rpredcas=predict(ridge.mod,s=bestlam,newx=xtest)
+rpredreg=predict(ridge.mod2,s=bestlam2,newx=x2test)
 
 rpred.ridge.count=(rpredcas)^2+(rpredreg)^2
 
-#
-#save results for kaggle submission - 6493
-#
 resultr <- data.frame(datetime = test$datetime, count=rpred.ridge.count)
 colnames(resultr)<-c("datetime","count")
 write.csv(resultr, file="submit_result_ridge.csv",row.names=FALSE)
-#gives kaggle score of 1.36371
 
 #Lasso for rtcas
-lasso.mod=glmnet(x[1:nrow(newtrain),],y[1:nrow(newtrain)],alpha=1,lambda=grid)
+lasso.mod=glmnet(x[train.index,],y[train.index],alpha=1,lambda=grid)
 plot(lasso.mod)
-cv.out3=cv.glmnet(x[1:nrow(newtrain),],y[1:nrow(newtrain)],alpha=1)
+cv.out3=cv.glmnet(x[train.index,],y[train.index],alpha=1)
 plot(cv.out3)
 bestlam3=cv.out3$lambda.min
 bestlam3
-lasso.pred=predict(lasso.mod,s=bestlam3,newx=x[(1+nrow(newtrain)):(nrow(newtrain)+nrow(newtest)),])
+lasso.pred=predict(lasso.mod,s=bestlam3,newx=x[-train.index,])
 mean((lasso.pred-ytest)^2)
 
 #Lasso for rtreg
-lasso.mod2=glmnet(x[1:nrow(newtrain),],y[1:nrow(newtrain)],alpha=1,lambda=grid)
+lasso.mod2=glmnet(x2[train.index,],y2[train.index],alpha=1,lambda=grid)
 plot(lasso.mod2)
-cv.out4=cv.glmnet(x[1:nrow(newtrain),],y[1:nrow(newtrain)],alpha=1)
+cv.out4=cv.glmnet(x2[train.index,],y2[train.index],alpha=1)
 plot(cv.out4)
 bestlam4=cv.out4$lambda.min
 bestlam4
-lasso.pred2=predict(lasso.mod2,s=bestlam4,newx=x2[(1+nrow(newtrain)):(nrow(newtrain)+nrow(newtest)),])
+lasso.pred2=predict(lasso.mod2,s=bestlam4,newx=x2[-train.index,])
 mean((lasso.pred2-ytest2)^2)
 
 #Lasso final prediction
-lpredcas=predict(lasso.mod,s=bestlam3,newx=x[(nrow(newtrain)+nrow(newtest)+1):(nrow(newdata)),])
-lpredreg=predict(lasso.mod2,s=bestlam4,newx=x2[(nrow(newtrain)+nrow(newtest)+1):(nrow(newdata)),])
+lpredcas=predict(lasso.mod,s=bestlam3,newx=xtest)
+lpredreg=predict(lasso.mod2,s=bestlam4,newx=x2test)
 
 lpred.lasso.count=(lpredcas)^2+(lpredreg)^2
 
-#
-#save results for kaggle submission - 6493
-#
 resultl <- data.frame(datetime = test$datetime, count=lpred.lasso.count)
 colnames(resultl)<-c("datetime","count")
 write.csv(resultl, file="submit_result_lasso.csv",row.names=FALSE)
-#gives kaggle score of 1.49743
-
 
 ####################
 #Random forest
