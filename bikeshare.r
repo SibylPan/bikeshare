@@ -394,6 +394,8 @@ cv.out=cv.glmnet(x[train.index,],y[train.index],alpha=0)
 plot(cv.out)
 bestlam=cv.out$lambda.min
 bestlam
+out.ridge=glmnet(x,y,alpha=0)
+ridge.coef=predict(out.ridge,type="coefficients",s=bestlam)[1:29,]
 ytest=newtest$rtcas
 ridge.pred=predict(ridge.mod,s=bestlam,newx=x[-train.index,])
 mean((ridge.pred-ytest)^2)
@@ -407,6 +409,8 @@ cv.out2=cv.glmnet(x2[train.index,],y2[train.index],alpha=0)
 plot(cv.out2)
 bestlam2=cv.out2$lambda.min
 bestlam2
+out.ridge2=glmnet(x2,y2,alpha =0)
+ridge.coef2=predict(out.ridge2,type="coefficients",s=bestlam2)[1:29,]
 ytest2=newtest$rtreg
 ridge.pred2=predict(ridge.mod2,s=bestlam2,newx=x2[-train.index,])
 mean((ridge.pred2-ytest2)^2)
@@ -416,9 +420,7 @@ xtest=model.matrix(rtcas~season+holiday+workingday+weather+temp+atemp+humidity+w
 x2test=model.matrix(rtreg~season+holiday+workingday+weather+temp+atemp+humidity+windspeed+hr_reg+day+year+month+date,test)[,-1]
 rpredcas=predict(ridge.mod,s=bestlam,newx=xtest)
 rpredreg=predict(ridge.mod2,s=bestlam2,newx=x2test)
-
 rpred.ridge.count=(rpredcas)^2+(rpredreg)^2
-
 resultr <- data.frame(datetime = test$datetime, count=rpred.ridge.count)
 colnames(resultr)<-c("datetime","count")
 write.csv(resultr, file="submit_result_ridge.csv",row.names=FALSE)
@@ -430,6 +432,8 @@ cv.out3=cv.glmnet(x[train.index,],y[train.index],alpha=1)
 plot(cv.out3)
 bestlam3=cv.out3$lambda.min
 bestlam3
+out.lasso=glmnet(x,y,alpha=1)
+lasso.coef=predict(out.lasso,type="coefficients",s= bestlam3)[1:29,]
 lasso.pred=predict(lasso.mod,s=bestlam3,newx=x[-train.index,])
 mean((lasso.pred-ytest)^2)
 
@@ -440,19 +444,18 @@ cv.out4=cv.glmnet(x2[train.index,],y2[train.index],alpha=1)
 plot(cv.out4)
 bestlam4=cv.out4$lambda.min
 bestlam4
+out.lasso2=glmnet(x2,y2,alpha=1)
+lasso.coef2=predict(out.lasso2,type="coefficients",s= bestlam4)[1:29,]
 lasso.pred2=predict(lasso.mod2,s=bestlam4,newx=x2[-train.index,])
 mean((lasso.pred2-ytest2)^2)
 
 #Lasso final prediction
 lpredcas=predict(lasso.mod,s=bestlam3,newx=xtest)
 lpredreg=predict(lasso.mod2,s=bestlam4,newx=x2test)
-
 lpred.lasso.count=(lpredcas)^2+(lpredreg)^2
-
 resultl <- data.frame(datetime = test$datetime, count=lpred.lasso.count)
 colnames(resultl)<-c("datetime","count")
 write.csv(resultl, file="submit_result_lasso.csv",row.names=FALSE)
-
 
 ####################
 #Random forest
