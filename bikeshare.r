@@ -323,13 +323,13 @@ train$hr_reg[train$hour==8]=5
 train$hr_reg[train$hour>=19 & train$hour<21]=6
 train$hr_reg[train$hour>=17 & train$hour<19]=7
 test$hr_reg=0
-test$hr_reg[data$hour<7]=1
-test$hr_reg[data$hour>=21]=2
-test$hr_reg[data$hour>8 & data$hour<17]=3
-test$hr_reg[data$hour==7]=4
-test$hr_reg[data$hour==8]=5
-test$hr_reg[data$hour>=19 & data$hour<21]=6
-test$hr_reg[data$hour>=17 & data$hour<19]=7
+test$hr_reg[test$hour<7]=1
+test$hr_reg[test$hour>=21]=2
+test$hr_reg[test$hour>8 & data$hour<17]=3
+test$hr_reg[test$hour==7]=4
+test$hr_reg[test$hour==8]=5
+test$hr_reg[test$hour>=19 & data$hour<21]=6
+test$hr_reg[test$hour>=17 & data$hour<19]=7
 
 #hour bins for casual
 data$hr_cas=0
@@ -343,10 +343,10 @@ train$hr_cas[train$hour==8 | train$hour==9]=2
 train$hr_cas[train$hour>=20]=3
 train$hr_cas[train$hour>9 & train$hour<20]=4
 test$hr_cas=0
-test$hr_cas[data$hour<=7]=1
-test$hr_cas[data$hour==8 | data$hour==9]=2
-test$hr_cas[data$hour>=20]=3
-test$hr_cas[data$hour>9 & data$hour<20]=4
+test$hr_cas[test$hour<=7]=1
+test$hr_cas[test$hour==8 | data$hour==9]=2
+test$hr_cas[test$hour>=20]=3
+test$hr_cas[test$hour>9 & data$hour<20]=4
 
 #hour bins for count
 data$hr_cou=0
@@ -368,14 +368,14 @@ train$hr_cou[train$hour>=19 & train$hour<21]=6
 train$hr_cou[train$hour==16]=7
 train$hr_cou[train$hour>=17 & train$hour<19]=8
 test$hr_cou=0
-test$hr_cou[data$hour<7]=1
-test$hr_cou[data$hour>=21]=2
-test$hr_cou[data$hour>8 & data$hour<16]=3
-test$hr_cou[data$hour==7]=4
-test$hr_cou[data$hour==8]=5
-test$hr_cou[data$hour>=19 & data$hour<21]=6
-test$hr_cou[data$hour==16]=7
-test$hr_cou[data$hour>=17 & data$hour<19]=8
+test$hr_cou[test$hour<7]=1
+test$hr_cou[test$hour>=21]=2
+test$hr_cou[test$hour>8 & data$hour<16]=3
+test$hr_cou[test$hour==7]=4
+test$hr_cou[test$hour==8]=5
+test$hr_cou[test$hour>=19 & data$hour<21]=6
+test$hr_cou[test$hour==16]=7
+test$hr_cou[test$hour>=17 & data$hour<19]=8
 
 
 #split the train variable into its own train & test sets
@@ -478,12 +478,18 @@ for(i in 1:4){
     test.err.cas[i,j]=with(newtest,mean((rtcas-pred)^2))
   }
 }
-par(mfrow=c(1,2))
+
 matplot(t(test.err.cas),type="l",main = "rtcas", xlab='mtry', xaxt="n",ylab='Mean Squared Error (test)', col=1:4)
 legend('topright', inset=.05, legend=c("250","300","350","400"), 
        pch=19, horiz=TRUE, col=1:4, title="ntree")
 axis(1, at=1:8, labels=seq(3,10,by=1))
 ##minimum err occurred at ntree=300 ,mtry=5,test error=1.077
+
+
+set.seed(1)
+rf.cas.t=randomForest(formula.cas,data=newtrain,mtry=5,importance=TRUE,ntree=300)
+pred=predict(rf.cas.t,newdata=newtest)
+plot((pred)^2,newtest$casual,main="Predicted vs Actual (casual)",xlab="Predicted",ylab="Actual")
 
 set.seed(1)
 rf.cas=randomForest(formula.cas,data=train[,-1],mtry=5,importance=TRUE,ntree=300)
@@ -515,6 +521,11 @@ legend('topright', inset=.05, legend=c("250","300","350","400"),
        pch=19, horiz=TRUE, col=1:4, title="ntree")
 axis(1, at=1:8, labels=seq(3,10,by=1))
 ##minimum err occurred at ntree=400, mtry=7,test error=1.534
+
+set.seed(1)
+rf.reg.t=randomForest(formula.reg,data=newtrain,mtry=7,importance=TRUE,ntree=400)
+pred=predict(rf.reg.t,newdata=newtest)
+plot((pred)^2,newtest$registered,main="Predicted vs Actual (registered)",xlab="Predicted",ylab="Actual")
 
 set.seed(1)
 rf.reg=randomForest(formula.reg,data=train[,-1],mtry=7,importance=TRUE,ntree=400)
@@ -575,6 +586,14 @@ legend("topright",title="Shrinkage",legend=c("0.01","0.05","0.1"),pch=19,inset=0
 abline(h=min(test.err.cas),col="black")
 
 #choose shrinkage=0.05, n.tree=5000, depth=6
+set.seed(1)
+boost.cas.t=gbm(formula.cas,data=newtrain,distribution="gaussian",
+              n.trees=5000,interaction.depth=6,shrinkage=0.05,verbose=F)
+pred=predict(boost.cas.t,newdata=newtest,n.trees=5000)
+mean((pred-newtest$rtcas)^2)
+plot((pred)^2,newtest$casual,main="Predicted vs Actual (casual)",xlab="Predicted",ylab="Actual")
+#test error = 0.966
+
 boost.cas=gbm(formula.cas,data=train[,-1],distribution="gaussian",
               n.trees=5000,interaction.depth=6,shrinkage=0.05,verbose=F)
 pred.boost.cas=predict(boost.cas,newdata=test[,-1],n.trees=5000)
@@ -624,6 +643,14 @@ legend("topright",title="Shrinkage",legend=c("0.01","0.05","0.1"),pch=19,inset=0
 abline(h=min(test.err.reg),col="black")
 #choose shrinkage=0.05, n.tree=5000,depth=6
 
+set.seed(1)
+boost.reg.t=gbm(formula.reg,data=newtrain,distribution="gaussian",
+                n.trees=5000,interaction.depth=6,shrinkage=0.05,verbose=F)
+pred=predict(boost.reg.t,newdata=newtest,n.trees=5000)
+mean((predmat-newtest$rtreg)^2)
+plot((pred)^2,newtest$registered,main="Predicted vs Actual (registered)",xlab="Predicted",ylab="Actual")
+#test error = 1.312
+
 boost.reg=gbm(formula.reg,data=train[,-1],distribution="gaussian",
               n.trees=5000,interaction.depth=6,shrinkage=0.05,verbose=F)
 pred.boost.reg=predict(boost.reg,newdata=test[,-1],n.trees=5000)
@@ -635,10 +662,10 @@ pred.boost.count=(pred.boost.cas)^2+(pred.boost.reg)^2
 #save results for kaggle submission
 ##########################
 result <- data.frame(datetime = test$datetime, count=pred.rf.count)
-write.csv(result, file="submit_result_trans_nohrbin_rf.csv",row.names=FALSE)
+write.csv(result, file="submit_result_rf.csv",row.names=FALSE)
 
 result2 <- data.frame(datetime = test$datetime, count=pred.boost.count)
-write.csv(result2, file="submit_result_trans_nohrbin_boost.csv",row.names=FALSE)
+write.csv(result2, file="submit_result_boost.csv",row.names=FALSE)
 
 ##########################
 #Non-linear models
